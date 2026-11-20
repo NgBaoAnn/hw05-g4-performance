@@ -1,0 +1,625 @@
+<?xml version='1.0' encoding='utf-8'?>
+<jmeterTestPlan version="1.2" properties="5.0" jmeter="5.6.3">
+  <hashTree>
+    <TestPlan guiclass="TestPlanGui" testclass="TestPlan" testname="23120207_Spike_20261120" enabled="true" />
+    <hashTree>
+      <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="JSON requests" enabled="true">
+        <collectionProp name="HeaderManager.headers">
+          <elementProp name="" elementType="Header">
+            <stringProp name="Header.name">Content-Type</stringProp>
+            <stringProp name="Header.value">application/json</stringProp>
+          </elementProp>
+        </collectionProp>
+      </HeaderManager>
+      <hashTree />
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Spike-1" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">startnextloop</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController">
+          <stringProp name="LoopController.loops">${__P(loops,-1)}</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">5</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">1</stringProp>
+        <stringProp name="ThreadGroup.delay">0</stringProp>
+        <stringProp name="ThreadGroup.duration">365</stringProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Login" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"email":"${email}","password":"${password}"}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+          <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.path">/api/login</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify Login" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j.user.role == 'admin' &amp;&amp; j.token
+vars.put('jwt', j.token)</stringProp>
+          </JSR223Assertion>
+          <hashTree />
+          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Assign CSV fixture and iteration" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">if (!vars.get('slot')) {
+    def lines = new File(props.getProperty('fixture', '../data/admin-fixtures.csv')).readLines('UTF-8')
+    def keys = lines[0].split(',', -1)
+    def row = lines[ctx.threadNum + 0 + 1].split(',', -1)
+    assert row.size() == keys.size()
+    keys.eachWithIndex { key, i -&gt; vars.put(key, row[i]) }
+}
+def n = vars.getIteration()
+vars.put('price', vars.get(n % 2 == 1 ? 'high' : 'low'))
+vars.put('code', 'G4-' + props.getProperty('runId', 'local') + '-' + vars.get('slot') + '-' + n)</stringProp>
+          </JSR223PreProcessor>
+          <hashTree />
+        </hashTree>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Authenticated operations" enabled="true" />
+        <hashTree>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Thread JWT" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Authorization</stringProp>
+                <stringProp name="Header.value">Bearer ${jwt}</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree />
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Dashboard_Users" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments" />
+            </elementProp>
+            <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+            <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.path">/api/admin/users</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Admin think time" enabled="true">
+              <stringProp name="ConstantTimer.delay">1000</stringProp>
+              <stringProp name="RandomTimer.range">2000</stringProp>
+            </UniformRandomTimer>
+            <hashTree />
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify Dashboard_Users" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j instanceof List &amp;&amp; j.any { it.email == vars.get('email') &amp;&amp; it.role == 'admin' }</stringProp>
+            </JSR223Assertion>
+            <hashTree />
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Dashboard_Orders" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments" />
+            </elementProp>
+            <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+            <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.path">/api/admin/orders</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify Dashboard_Orders" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j instanceof List &amp;&amp; j.any { it.id == 9001 }</stringProp>
+            </JSR223Assertion>
+            <hashTree />
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Dashboard_Products" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments" />
+            </elementProp>
+            <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+            <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.path">/api/products</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify Dashboard_Products" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j instanceof List &amp;&amp; j.any { it.id.toString() == vars.get('product_id') }</stringProp>
+            </JSR223Assertion>
+            <hashTree />
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Dashboard_Categories" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments" />
+            </elementProp>
+            <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+            <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.path">/api/categories</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify Dashboard_Categories" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j instanceof List &amp;&amp; j.any { it.id == 1 }</stringProp>
+            </JSR223Assertion>
+            <hashTree />
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Dashboard_Coupons" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments" />
+            </elementProp>
+            <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+            <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.path">/api/coupons</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify Dashboard_Coupons" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j instanceof List &amp;&amp; j.any { it.code == 'SAVE10' }</stringProp>
+            </JSR223Assertion>
+            <hashTree />
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="CreateCoupon" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">{"code":"${code}","type":"percent","discount_value":10,"min_order_amount":100000,"expired_at":"2099-12-31","max_uses_per_user":1}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+            <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+            <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+            <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.path">/api/admin/coupons</stringProp>
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Admin think time" enabled="true">
+              <stringProp name="ConstantTimer.delay">1000</stringProp>
+              <stringProp name="RandomTimer.range">2000</stringProp>
+            </UniformRandomTimer>
+            <hashTree />
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify CreateCoupon" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j.message == 'Coupon created' &amp;&amp; j.id &gt; 0</stringProp>
+            </JSR223Assertion>
+            <hashTree />
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="UpdatePrice" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">{"name":"${name}","price":${price},"description":"${description}","imageUrl":"${imageUrl}","category_id":${category_id}}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+            <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+            <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+            <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.path">/api/products/${product_id}</stringProp>
+            <stringProp name="HTTPSampler.method">PUT</stringProp>
+            <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Admin think time" enabled="true">
+              <stringProp name="ConstantTimer.delay">1000</stringProp>
+              <stringProp name="RandomTimer.range">2000</stringProp>
+            </UniformRandomTimer>
+            <hashTree />
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify UpdatePrice" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j.message == 'Product updated'</stringProp>
+            </JSR223Assertion>
+            <hashTree />
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="VerifyPrice" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments" />
+            </elementProp>
+            <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+            <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.path">/api/products/${product_id}</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify VerifyPrice" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j.id.toString() == vars.get('product_id') &amp;&amp; j.price.toString() == vars.get('price')
+assert j.name == vars.get('name') &amp;&amp; j.description == vars.get('description') &amp;&amp; j.imageUrl == vars.get('imageUrl') &amp;&amp; j.category_id.toString() == vars.get('category_id')</stringProp>
+            </JSR223Assertion>
+            <hashTree />
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Orders_AfterPriceUpdate" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments" />
+            </elementProp>
+            <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+            <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.path">/api/admin/orders</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Admin think time" enabled="true">
+              <stringProp name="ConstantTimer.delay">1000</stringProp>
+              <stringProp name="RandomTimer.range">2000</stringProp>
+            </UniformRandomTimer>
+            <hashTree />
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify Orders_AfterPriceUpdate" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j instanceof List &amp;&amp; j.any { it.id == 9001 }</stringProp>
+            </JSR223Assertion>
+            <hashTree />
+          </hashTree>
+        </hashTree>
+      </hashTree>
+      <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Spike-2" enabled="true">
+        <stringProp name="ThreadGroup.on_sample_error">startnextloop</stringProp>
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController">
+          <stringProp name="LoopController.loops">${__P(loops,-1)}</stringProp>
+        </elementProp>
+        <stringProp name="ThreadGroup.num_threads">45</stringProp>
+        <stringProp name="ThreadGroup.ramp_time">5</stringProp>
+        <stringProp name="ThreadGroup.delay">120</stringProp>
+        <stringProp name="ThreadGroup.duration">65</stringProp>
+        <boolProp name="ThreadGroup.scheduler">true</boolProp>
+      </ThreadGroup>
+      <hashTree>
+        <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Login" enabled="true">
+          <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+            <collectionProp name="Arguments.arguments">
+              <elementProp name="" elementType="HTTPArgument">
+                <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                <stringProp name="Argument.value">{"email":"${email}","password":"${password}"}</stringProp>
+                <stringProp name="Argument.metadata">=</stringProp>
+              </elementProp>
+            </collectionProp>
+          </elementProp>
+          <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+          <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+          <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+          <stringProp name="HTTPSampler.protocol">http</stringProp>
+          <stringProp name="HTTPSampler.path">/api/login</stringProp>
+          <stringProp name="HTTPSampler.method">POST</stringProp>
+          <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+          <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+        </HTTPSamplerProxy>
+        <hashTree>
+          <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify Login" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j.user.role == 'admin' &amp;&amp; j.token
+vars.put('jwt', j.token)</stringProp>
+          </JSR223Assertion>
+          <hashTree />
+          <JSR223PreProcessor guiclass="TestBeanGUI" testclass="JSR223PreProcessor" testname="Assign CSV fixture and iteration" enabled="true">
+            <stringProp name="scriptLanguage">groovy</stringProp>
+            <stringProp name="cacheKey">true</stringProp>
+            <stringProp name="script">if (!vars.get('slot')) {
+    def lines = new File(props.getProperty('fixture', '../data/admin-fixtures.csv')).readLines('UTF-8')
+    def keys = lines[0].split(',', -1)
+    def row = lines[ctx.threadNum + 5 + 1].split(',', -1)
+    assert row.size() == keys.size()
+    keys.eachWithIndex { key, i -&gt; vars.put(key, row[i]) }
+}
+def n = vars.getIteration()
+vars.put('price', vars.get(n % 2 == 1 ? 'high' : 'low'))
+vars.put('code', 'G4-' + props.getProperty('runId', 'local') + '-' + vars.get('slot') + '-' + n)</stringProp>
+          </JSR223PreProcessor>
+          <hashTree />
+        </hashTree>
+        <GenericController guiclass="LogicControllerGui" testclass="GenericController" testname="Authenticated operations" enabled="true" />
+        <hashTree>
+          <HeaderManager guiclass="HeaderPanel" testclass="HeaderManager" testname="Thread JWT" enabled="true">
+            <collectionProp name="HeaderManager.headers">
+              <elementProp name="" elementType="Header">
+                <stringProp name="Header.name">Authorization</stringProp>
+                <stringProp name="Header.value">Bearer ${jwt}</stringProp>
+              </elementProp>
+            </collectionProp>
+          </HeaderManager>
+          <hashTree />
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Dashboard_Users" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments" />
+            </elementProp>
+            <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+            <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.path">/api/admin/users</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Admin think time" enabled="true">
+              <stringProp name="ConstantTimer.delay">1000</stringProp>
+              <stringProp name="RandomTimer.range">2000</stringProp>
+            </UniformRandomTimer>
+            <hashTree />
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify Dashboard_Users" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j instanceof List &amp;&amp; j.any { it.email == vars.get('email') &amp;&amp; it.role == 'admin' }</stringProp>
+            </JSR223Assertion>
+            <hashTree />
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Dashboard_Orders" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments" />
+            </elementProp>
+            <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+            <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.path">/api/admin/orders</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify Dashboard_Orders" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j instanceof List &amp;&amp; j.any { it.id == 9001 }</stringProp>
+            </JSR223Assertion>
+            <hashTree />
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Dashboard_Products" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments" />
+            </elementProp>
+            <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+            <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.path">/api/products</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify Dashboard_Products" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j instanceof List &amp;&amp; j.any { it.id.toString() == vars.get('product_id') }</stringProp>
+            </JSR223Assertion>
+            <hashTree />
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Dashboard_Categories" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments" />
+            </elementProp>
+            <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+            <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.path">/api/categories</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify Dashboard_Categories" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j instanceof List &amp;&amp; j.any { it.id == 1 }</stringProp>
+            </JSR223Assertion>
+            <hashTree />
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Dashboard_Coupons" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments" />
+            </elementProp>
+            <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+            <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.path">/api/coupons</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify Dashboard_Coupons" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j instanceof List &amp;&amp; j.any { it.code == 'SAVE10' }</stringProp>
+            </JSR223Assertion>
+            <hashTree />
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="CreateCoupon" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">{"code":"${code}","type":"percent","discount_value":10,"min_order_amount":100000,"expired_at":"2099-12-31","max_uses_per_user":1}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+            <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+            <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+            <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.path">/api/admin/coupons</stringProp>
+            <stringProp name="HTTPSampler.method">POST</stringProp>
+            <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Admin think time" enabled="true">
+              <stringProp name="ConstantTimer.delay">1000</stringProp>
+              <stringProp name="RandomTimer.range">2000</stringProp>
+            </UniformRandomTimer>
+            <hashTree />
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify CreateCoupon" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j.message == 'Coupon created' &amp;&amp; j.id &gt; 0</stringProp>
+            </JSR223Assertion>
+            <hashTree />
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="UpdatePrice" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments">
+                <elementProp name="" elementType="HTTPArgument">
+                  <boolProp name="HTTPArgument.always_encode">false</boolProp>
+                  <stringProp name="Argument.value">{"name":"${name}","price":${price},"description":"${description}","imageUrl":"${imageUrl}","category_id":${category_id}}</stringProp>
+                  <stringProp name="Argument.metadata">=</stringProp>
+                </elementProp>
+              </collectionProp>
+            </elementProp>
+            <boolProp name="HTTPSampler.postBodyRaw">true</boolProp>
+            <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+            <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.path">/api/products/${product_id}</stringProp>
+            <stringProp name="HTTPSampler.method">PUT</stringProp>
+            <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Admin think time" enabled="true">
+              <stringProp name="ConstantTimer.delay">1000</stringProp>
+              <stringProp name="RandomTimer.range">2000</stringProp>
+            </UniformRandomTimer>
+            <hashTree />
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify UpdatePrice" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j.message == 'Product updated'</stringProp>
+            </JSR223Assertion>
+            <hashTree />
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="VerifyPrice" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments" />
+            </elementProp>
+            <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+            <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.path">/api/products/${product_id}</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify VerifyPrice" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j.id.toString() == vars.get('product_id') &amp;&amp; j.price.toString() == vars.get('price')
+assert j.name == vars.get('name') &amp;&amp; j.description == vars.get('description') &amp;&amp; j.imageUrl == vars.get('imageUrl') &amp;&amp; j.category_id.toString() == vars.get('category_id')</stringProp>
+            </JSR223Assertion>
+            <hashTree />
+          </hashTree>
+          <HTTPSamplerProxy guiclass="HttpTestSampleGui" testclass="HTTPSamplerProxy" testname="Orders_AfterPriceUpdate" enabled="true">
+            <elementProp name="HTTPsampler.Arguments" elementType="Arguments">
+              <collectionProp name="Arguments.arguments" />
+            </elementProp>
+            <stringProp name="HTTPSampler.domain">127.0.0.1</stringProp>
+            <stringProp name="HTTPSampler.port">${__P(port,3000)}</stringProp>
+            <stringProp name="HTTPSampler.protocol">http</stringProp>
+            <stringProp name="HTTPSampler.path">/api/admin/orders</stringProp>
+            <stringProp name="HTTPSampler.method">GET</stringProp>
+            <stringProp name="HTTPSampler.connect_timeout">5000</stringProp>
+            <stringProp name="HTTPSampler.response_timeout">15000</stringProp>
+          </HTTPSamplerProxy>
+          <hashTree>
+            <UniformRandomTimer guiclass="UniformRandomTimerGui" testclass="UniformRandomTimer" testname="Admin think time" enabled="true">
+              <stringProp name="ConstantTimer.delay">1000</stringProp>
+              <stringProp name="RandomTimer.range">2000</stringProp>
+            </UniformRandomTimer>
+            <hashTree />
+            <JSR223Assertion guiclass="TestBeanGUI" testclass="JSR223Assertion" testname="Verify Orders_AfterPriceUpdate" enabled="true">
+              <stringProp name="scriptLanguage">groovy</stringProp>
+              <stringProp name="cacheKey">true</stringProp>
+              <stringProp name="script">assert prev.responseCode == '200'
+def j = new groovy.json.JsonSlurper().parse(prev.responseData)
+assert j instanceof List &amp;&amp; j.any { it.id == 9001 }</stringProp>
+            </JSR223Assertion>
+            <hashTree />
+          </hashTree>
+        </hashTree>
+      </hashTree>
+      <ResultCollector guiclass="RespTimeGraphVisualizer" testclass="ResultCollector" testname="Response Time Graph" enabled="false" />
+      <hashTree />
+    </hashTree>
+  </hashTree>
+</jmeterTestPlan>
