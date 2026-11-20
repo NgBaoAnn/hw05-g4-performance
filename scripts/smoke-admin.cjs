@@ -18,6 +18,8 @@ async function main() {
     const orderCount = page.getByRole("heading",{name:"Tổng số đơn hàng"}).locator("..").locator("p");
     await page.waitForFunction(() => [...document.querySelectorAll("h3")].some(h => h.textContent==="Tổng số đơn hàng" && h.nextElementSibling?.textContent==="1"));
     assert.equal(await orderCount.textContent(),"1");
+    const revenue = page.getByRole("heading",{name:"Tổng doanh thu (Delivered)"}).locator("..").locator("p");
+    assert.equal((await revenue.textContent()).trim(),"0 ₫");
     await page.screenshot({path:path.join(out,"dashboard.png")});
     checks.push(["FR-12/13","Admin login, Dashboard", "1 order; 0 delivered revenue"]);
     const token = await page.evaluate(()=>localStorage.getItem("adminToken"));
