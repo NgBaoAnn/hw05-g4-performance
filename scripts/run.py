@@ -23,6 +23,7 @@ DEFAULTS = {"Smoke": (1, 1, 90, 3), "Pilot": (5, 5, 120, -1), "Load": (10, 60, 3
 
 def start_backend(log):
     with socket.socket() as sock:
+        sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         sock.bind(("127.0.0.1", 3000))
     # Only run in a dedicated clone. Upstream drops its demo tables at every boot.
     assert (BACKEND.parent / ".git").exists()

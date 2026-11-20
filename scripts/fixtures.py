@@ -8,8 +8,7 @@ ROOT = Path(__file__).resolve().parents[1]
 FIELDS = "slot,email,password,product_id,name,description,imageUrl,category_id,low,high".split(",")
 
 
-def seed():
-    backend = ROOT / ".work/eshop/backend"
+def seed(backend=ROOT / ".work/eshop/backend"):
     with sqlite3.connect(backend / "database.sqlite") as db:
         assert db.execute("SELECT COUNT(*) FROM products").fetchone()[0] == 5, "Expected fresh demo DB"
         for row in csv.DictReader((ROOT / "data/admin-fixtures.csv").open()):
