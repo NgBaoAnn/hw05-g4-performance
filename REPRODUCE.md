@@ -28,6 +28,8 @@ python3 scripts/run.py Spike --out evidence/Spike
 python3 scripts/analyze.py --choose-soak
 ```
 
+Trên macOS, chạy lệnh soak dưới `caffeinate -i` để ngăn máy ngủ trong lúc giữ tải. Nếu một cửa sổ phút không có HTTP sample, đối chiếu khoảng cách các dòng epoch trong resources.csv, giữ log gián đoạn và chạy lại từ seed sạch.
+
 Dùng số VU do lệnh cuối in ra thay cho N dưới đây. Soak dùng luồng Load trong 721 giây, gồm 1 giây ramp và 720 giây giữ tải. Nếu hết các bậc Stress mà chưa đạt tiêu chí, script đề xuất thăm dò 5 VU. Nếu soak thất bại, hạ về nửa số VU (tối thiểu 1) và tạo thư mục kết quả mới. Sau mỗi lần ghi lại nguyên nhân, gồm p95 theo sampler, lỗi và RPS ba phút cuối.
 
 ```sh
