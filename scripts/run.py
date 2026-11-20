@@ -65,6 +65,11 @@ def main():
         n = args.vu
     profile = scenario if scenario in ("Stress","Spike") else "Load"
     plan, = (ROOT/"plans").glob(f"*_{profile}_*.jmx")
+    if scenario == "Smoke":
+        # JMeter's scheduler controls duration. Use an explicit finite-loop smoke plan.
+        smoke = out/"smoke.jmx"
+        smoke.write_text(plan.read_text().replace('${__P(loops,-1)}', '3').replace('name="ThreadGroup.scheduler">true', 'name="ThreadGroup.scheduler">false'))
+        plan = smoke
     java = os.environ.get("JAVA", "java")
     jar = Path(os.environ.get("JMETER_HOME", WORK/"apache-jmeter-5.6.3"))/"bin/ApacheJMeter.jar"
     run_id = dt.datetime.now().strftime("%Y%m%d-%H%M%S") + "-" + scenario

@@ -14,7 +14,8 @@
       <hashTree />
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Stress-1" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">startnextloop</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController">
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
           <stringProp name="LoopController.loops">${__P(loops,-1)}</stringProp>
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">10</stringProp>
@@ -317,7 +318,8 @@ assert j instanceof List &amp;&amp; j.any { it.id == 9001 }</stringProp>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Stress-2" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">startnextloop</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController">
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
           <stringProp name="LoopController.loops">${__P(loops,-1)}</stringProp>
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">10</stringProp>
@@ -620,7 +622,8 @@ assert j instanceof List &amp;&amp; j.any { it.id == 9001 }</stringProp>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Stress-3" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">startnextloop</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController">
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
           <stringProp name="LoopController.loops">${__P(loops,-1)}</stringProp>
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">20</stringProp>
@@ -923,7 +926,8 @@ assert j instanceof List &amp;&amp; j.any { it.id == 9001 }</stringProp>
       </hashTree>
       <ThreadGroup guiclass="ThreadGroupGui" testclass="ThreadGroup" testname="Stress-4" enabled="true">
         <stringProp name="ThreadGroup.on_sample_error">startnextloop</stringProp>
-        <elementProp name="ThreadGroup.main_controller" elementType="LoopController">
+        <elementProp name="ThreadGroup.main_controller" elementType="LoopController" guiclass="LoopControlPanel" testclass="LoopController" testname="Loop Controller" enabled="true">
+          <boolProp name="LoopController.continue_forever">false</boolProp>
           <stringProp name="LoopController.loops">${__P(loops,-1)}</stringProp>
         </elementProp>
         <stringProp name="ThreadGroup.num_threads">40</stringProp>

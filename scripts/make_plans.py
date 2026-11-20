@@ -101,7 +101,8 @@ def build(scenario, groups, listener):
     for i, (users, ramp, delay, duration) in enumerate(groups):
         group, subtree = element(tree, "ThreadGroup", f"{scenario}-{i+1}", "ThreadGroupGui")
         prop(group, "ThreadGroup.on_sample_error", "startnextloop")
-        loop = ET.SubElement(group, "elementProp", name="ThreadGroup.main_controller", elementType="LoopController")
+        loop = ET.SubElement(group, "elementProp", name="ThreadGroup.main_controller", elementType="LoopController", guiclass="LoopControlPanel", testclass="LoopController", testname="Loop Controller", enabled="true")
+        prop(loop, "LoopController.continue_forever", "false", "boolProp")
         prop(loop, "LoopController.loops", "${__P(loops,-1)}")
         for key, val in dict(num_threads=users, ramp_time=ramp, delay=delay, duration=duration).items():
             prop(group, "ThreadGroup."+key, val)
